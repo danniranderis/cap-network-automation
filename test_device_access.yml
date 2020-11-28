@@ -1,10 +1,8 @@
 ---
-# Test playbook to test access to devices.
-
 - name: Test connectivity to devices
-  gather_facts: False
+  connection: network_cli
+  gather_facts: false
   hosts: all
-
   tasks:
     - name: Get facts from IOS-devices
       ios_facts:
