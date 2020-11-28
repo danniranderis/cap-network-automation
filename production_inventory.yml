@@ -16,7 +16,7 @@ group_by:
   - platforms
 
 # Do not get devices at HQ or from the staging-setup
-query_filter:
+query_filters:
   - site__n: 'aar-hq'
   - site__n: 'aar-9999'
 

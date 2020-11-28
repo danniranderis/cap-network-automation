@@ -16,7 +16,7 @@ group_by:
   - platforms
 
 # Only get devices in Staging/test setup for site AAR-9999
-query_filter:
+query_filters:
   - site: 'aar-9999'
 
 # Filter out passive-devices as e.g. patch-panels and only get devices
