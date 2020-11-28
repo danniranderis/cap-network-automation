@@ -1,0 +1,15 @@
+---
+# Test playbook to test access to devices.
+
+gather_facts: False
+hosts: all
+
+tasks:
+  - name: Get facts from IOS-devices
+    ios_facts:
+      gather_subset: all
+
+  - name: Display HOSTNAME and IOS_VERSION
+    debug:
+      msg: "The hostname is {{ ansible_net_hostname }} and the OS is {{ ansible_net_version }}"
+...
