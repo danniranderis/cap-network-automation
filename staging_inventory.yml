@@ -1,0 +1,30 @@
+---
+# Inventory file using module netbox.netbox to gather dynamic inventory from
+# NetBox instance for SSoT (Single Source of Truth).
+#
+# Only get devices assigned staging-roles
+
+plugin: netbox.netbox.nb_inventory
+api_endpoint: https://netbox.cap-butikker.dk
+token: 0c9af3f67783d386bcf43f24b1b84998b7549d5d
+validate_certs: True
+config_context: False
+group_by:
+  - device_roles
+  - tags
+  - sites
+  - platforms
+
+# Only get devices in Staging/test setup for site AAR-9999
+query_filter:
+  - site: 'aar-9999'
+
+# Filter out passive-devices as e.g. patch-panels and only get devices
+# with an IP-address
+device_query_filters:
+  - has_primary_ip: 'true'
+
+# Insert informations as Ansible-facts on hosts
+compose:
+  ansible_network_os: platform.slug
+...
