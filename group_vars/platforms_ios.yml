@@ -1,0 +1,7 @@
+---
+# Variables / settings for all hosts within the group "platforms_ios"
+
+connection: network_cli
+become: yes
+become_method: enable
+...
