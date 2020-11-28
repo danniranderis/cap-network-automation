@@ -1,6 +1,8 @@
 ---
 # Inventory file using module netbox.netbox to gather dynamic inventory from
 # NetBox instance for SSoT (Single Source of Truth).
+#
+# Get all devices within "butikker"
 
 plugin: netbox.netbox.nb_inventory
 api_endpoint: https://netbox.cap-butikker.dk
@@ -11,9 +13,19 @@ group_by:
   - device_roles
   - tags
   - sites
+  - platforms
+
+# Do not get devices at HQ or from the staging-setup
+query_filter:
+  - site__n: 'aar-hq'
+  - site__n: 'aar-9999'
 
 # Filter out passive-devices as e.g. patch-panels and only get devices
 # with an IP-address
 device_query_filters:
   - has_primary_ip: 'true'
+
+# Insert informations as Ansible-facts on hosts
+compose:
+  ansible_network_os: platform.slug
 ...
