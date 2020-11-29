@@ -23,6 +23,8 @@
         netbox_token: '{{ nb_token }}'
         data:
           name: '{{ store_site }}'
+          tags:
+            - Butik
         state: present
 
     - name: Create vlan group
