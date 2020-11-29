@@ -13,6 +13,10 @@
 
   tasks:
 
+    - name: Install requirements in VENV
+      pip:
+        name: pynetbox
+
     - name: Create Site obj
       netbox_site:
         netbox_url: '{{ nb_url }}'
