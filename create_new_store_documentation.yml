@@ -1,0 +1,159 @@
+---
+- name: Create New Store in NetBox
+  connection: local
+  hosts: localhost
+  collections:
+    - netbox.netbox
+  gather_facts: false
+
+  vars:
+    nb_url: https://netbox.cap-butikker.dk
+    nb_token: 0c9af3f67783d386bcf43f24b1b84998b7549d5d
+    store_id: 3453
+    store_tbf: WER
+    store_prefix: '10.64.8.0/21'
+    store_site: '{{ store_tbf }}-{{ store_id }}'
+
+  tasks:
+    - name: Create Site obj
+      netbox_site:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          name: '{{ store_tbf }}-{{ store_id}}'
+        state: present
+
+    - name: Create vlan group
+      netbox_vlan_group:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          name: '{{ store_tbf }}-{{ store_id }}_VLANS'
+          site: '{{ store_tbf }}-{{ store_id }}'
+        state: present
+
+    - name: Create vlan 10
+      netbox_vlan:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          name: 'MGMT'
+          vid: 10
+          site: '{{ store_site }}'
+          vlan_group: '{{ store_tbf }}-{{ store_id }}_VLANS'
+        state: present
+
+    - name: Create vlan 30
+      netbox_vlan:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          name: 'CLIENT'
+          vid: 30
+          site: '{{ store_site }}'
+          vlan_group: '{{ store_tbf }}-{{ store_id }}_VLANS'
+        state: present
+
+    - name: Create vlan 40
+      netbox_vlan:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          name: 'GUEST'
+          vid: 40
+          site: '{{ store_site }}'
+          vlan_group: '{{ store_tbf }}-{{ store_id }}_VLANS'
+        state: present
+
+    - name: Create vlan 777
+      netbox_vlan:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          name: 'NATIVE'
+          vid: 777
+          site: '{{ store_site }}'
+          vlan_group: '{{ store_tbf }}-{{ store_id }}_VLANS'
+        state: present
+
+    - name: Create vlan 999
+      netbox_vlan:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          name: 'PARKING_LOT'
+          vid: 999
+          site: '{{ store_site }}'
+          vlan_group: '{{ store_tbf }}-{{ store_id }}_VLANS'
+        state: present
+
+    - name: Create Store-prefix
+      netbox_prefix:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          parent: 10.64.0.0/10
+          prefix_length: 21
+          site: '{{ store_site }}'
+          status: 'Container'
+        state: present
+        first_available: yes
+
+
+    - name: Create MGMT-VLAN prefix
+      netbox_prefix:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          parent: '{{ store_prefix }}'
+          prefix_length: 24
+          site: '{{ store_site }}'
+          status: Active
+          vlan:
+            name: 'MGMT'
+            vlan_group: '{{ store_site }}_VLANS'
+        state: present
+        first_available: yes
+
+    - name: Create CLIENT-VLAN prefix
+      netbox_prefix:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          parent: '{{ store_prefix }}'
+          prefix_length: 23
+          site: '{{ store_site }}'
+          status: Active
+          vlan:
+            name: 'CLIENT'
+            vlan_group: '{{ store_site }}_VLANS'
+        state: present
+        first_available: yes
+
+    - name: Create GUEST-VLAN prefix
+      netbox_prefix:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          parent: '{{ store_prefix }}'
+          prefix_length: 23
+          site: '{{ store_site }}'
+          status: Active
+          vlan:
+            name: 'GUEST'
+            vlan_group: '{{ store_site }}_VLANS'
+        state: present
+        first_available: yes
+
+    - name: Create router-device
+      netbox_device:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          name: '{{ store_site }}-RT01'
+          device_type: 2921k9
+          device_role: router
+          platform: ios
+          site: '{{ store_site }}'
+        state: present
+
