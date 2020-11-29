@@ -9,18 +9,16 @@
   vars:
     nb_url: https://netbox.cap-butikker.dk
     nb_token: 0c9af3f67783d386bcf43f24b1b84998b7549d5d
-    store_id: 3453
-    store_tbf: WER
-    store_prefix: '10.64.8.0/21'
     store_site: '{{ store_tbf }}-{{ store_id }}'
 
   tasks:
+
     - name: Create Site obj
       netbox_site:
         netbox_url: '{{ nb_url }}'
         netbox_token: '{{ nb_token }}'
         data:
-          name: '{{ store_tbf }}-{{ store_id}}'
+          name: '{{ store_site }}'
         state: present
 
     - name: Create vlan group
@@ -28,9 +26,10 @@
         netbox_url: '{{ nb_url }}'
         netbox_token: '{{ nb_token }}'
         data:
-          name: '{{ store_tbf }}-{{ store_id }}_VLANS'
-          site: '{{ store_tbf }}-{{ store_id }}'
+          name: '{{ store_site }}_VLANS'
+          site: '{{ store_site }}'
         state: present
+      register: store_vlan_grp
 
     - name: Create vlan 10
       netbox_vlan:
@@ -40,7 +39,7 @@
           name: 'MGMT'
           vid: 10
           site: '{{ store_site }}'
-          vlan_group: '{{ store_tbf }}-{{ store_id }}_VLANS'
+          vlan_group: '{{ store_vlan_grp.vlan_group.name }}'
         state: present
 
     - name: Create vlan 30
@@ -51,7 +50,7 @@
           name: 'CLIENT'
           vid: 30
           site: '{{ store_site }}'
-          vlan_group: '{{ store_tbf }}-{{ store_id }}_VLANS'
+          vlan_group: '{{ store_vlan_grp.vlan_group.name }}'
         state: present
 
     - name: Create vlan 40
@@ -62,7 +61,7 @@
           name: 'GUEST'
           vid: 40
           site: '{{ store_site }}'
-          vlan_group: '{{ store_tbf }}-{{ store_id }}_VLANS'
+          vlan_group: '{{ store_vlan_grp.vlan_group.name }}'
         state: present
 
     - name: Create vlan 777
@@ -73,7 +72,7 @@
           name: 'NATIVE'
           vid: 777
           site: '{{ store_site }}'
-          vlan_group: '{{ store_tbf }}-{{ store_id }}_VLANS'
+          vlan_group: '{{ store_vlan_grp.vlan_group.name }}'
         state: present
 
     - name: Create vlan 999
@@ -84,7 +83,7 @@
           name: 'PARKING_LOT'
           vid: 999
           site: '{{ store_site }}'
-          vlan_group: '{{ store_tbf }}-{{ store_id }}_VLANS'
+          vlan_group: '{{ store_vlan_grp.vlan_group.name }}'
         state: present
 
     - name: Create Store-prefix
@@ -98,52 +97,55 @@
           status: 'Container'
         state: present
         first_available: yes
-
+      register: store_prefix
 
     - name: Create MGMT-VLAN prefix
       netbox_prefix:
         netbox_url: '{{ nb_url }}'
         netbox_token: '{{ nb_token }}'
         data:
-          parent: '{{ store_prefix }}'
+          parent: '{{ store_prefix.prefix.prefix }}'
           prefix_length: 24
           site: '{{ store_site }}'
           status: Active
           vlan:
             name: 'MGMT'
-            vlan_group: '{{ store_site }}_VLANS'
+            vlan_group: '{{ store_vlan_grp.vlan_group.name }}'
         state: present
         first_available: yes
+      register: store_MGMT_prefix
 
     - name: Create CLIENT-VLAN prefix
       netbox_prefix:
         netbox_url: '{{ nb_url }}'
         netbox_token: '{{ nb_token }}'
         data:
-          parent: '{{ store_prefix }}'
+          parent: '{{ store_prefix.prefix.prefix }}'
           prefix_length: 23
           site: '{{ store_site }}'
           status: Active
           vlan:
             name: 'CLIENT'
-            vlan_group: '{{ store_site }}_VLANS'
+            vlan_group: '{{ store_vlan_grp.vlan_group.name }}'
         state: present
         first_available: yes
+      register: store_CLIENT_prefix
 
     - name: Create GUEST-VLAN prefix
       netbox_prefix:
         netbox_url: '{{ nb_url }}'
         netbox_token: '{{ nb_token }}'
         data:
-          parent: '{{ store_prefix }}'
+          parent: '{{ store_prefix.prefix.prefix }}'
           prefix_length: 23
           site: '{{ store_site }}'
           status: Active
           vlan:
             name: 'GUEST'
-            vlan_group: '{{ store_site }}_VLANS'
+            vlan_group: '{{ store_vlan_grp.vlan_group.name }}'
         state: present
         first_available: yes
+      register: store_GUEST_prefix
 
     - name: Create router-device
       netbox_device:
@@ -156,4 +158,232 @@
           platform: ios
           site: '{{ store_site }}'
         state: present
+      register: store_device_RT
 
+    - name: Add description on LAN-interface for Router-device
+      netbox_device_interface:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          device: '{{ store_device_RT.device.name }}'
+          name: 'GigabitEthernet 0/0'
+          description: LAN
+        state: present
+
+    - name: Add description on WAN-interface for Router-device
+      netbox_device_interface:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          device: '{{ store_device_RT.device.name }}'
+          name: 'GigabitEthernet 0/1'
+          description: WAN
+        state: present
+
+    - name: Add description on MPLS-interface for Router-device
+      netbox_device_interface:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          device: '{{ store_device_RT.device.name }}'
+          name: 'GigabitEthernet 0/2'
+          description: MPLS
+        state: present
+
+    - name: Create MGMT subinterface for LAN interface
+      netbox_device_interface:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          device: '{{ store_device_RT.device.name }}'
+          name: 'GigabitEthernet 0/0.10'
+          type: 'Virtual'
+          enabled: yes
+          mode: Tagged
+          tagged_vlans:
+            - name: MGMT
+              site: '{{ store_site }}'
+        state: present
+      register: store_device_RT_MGMT_subint
+
+    - name: Create CLIENT subinterface for LAN interface
+      netbox_device_interface:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          device: '{{ store_device_RT.device.name }}'
+          name: 'GigabitEthernet 0/0.30'
+          type: 'Virtual'
+          enabled: yes
+          mode: Tagged
+          tagged_vlans:
+            - name: CLIENT
+              site: '{{ store_site }}'
+        state: present
+      register: store_device_RT_CLIENT_subint
+
+    - name: Create GUEST subinterface for LAN interface
+      netbox_device_interface:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          device: '{{ store_device_RT.device.name }}'
+          name: 'GigabitEthernet 0/0.40'
+          type: 'Virtual'
+          enabled: yes
+          mode: Tagged
+          tagged_vlans:
+            - name: GUEST
+              site: '{{ store_site }}'
+        state: present
+      register: store_device_RT_GUEST_subint
+
+    - name: Assign IP-address for MGMT subinterface
+      netbox_ip_address:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          prefix: '{{ store_MGMT_prefix.prefix.prefix }}'
+          assigned_object:
+            name: '{{ store_device_RT_MGMT_subint.interface.name }}'
+            device: '{{ store_device_RT.device.name }}'
+        state: present
+      register: store_device_RT_MGMT_ipaddr
+
+    - name: Assign IP-address for CLIENT subinterface
+      netbox_ip_address:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          prefix: '{{ store_CLIENT_prefix.prefix.prefix }}'
+          assigned_object:
+            name: '{{ store_device_RT_CLIENT_subint.interface.name }}'
+            device: '{{ store_device_RT.device.name }}'
+        state: present
+      register: store_device_RT_CLIENT_ipaddr
+
+    - name: Assign IP-address for GUEST subinterface
+      netbox_ip_address:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          prefix: '{{ store_GUEST_prefix.prefix.prefix }}'
+          assigned_object:
+            name: '{{ store_device_RT_GUEST_subint.interface.name }}'
+            device: '{{ store_device_RT.device.name }}'
+        state: present
+      register: store_device_RT_GUEST_ipaddr
+
+    - name: Assign Primary IP-address for Router-device
+      netbox_device:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          name: '{{ store_device_RT.device.name }}'
+          primary_ip4: '{{ store_device_RT_MGMT_ipaddr.ip_address.address }}'
+        state: present
+
+    - name: Create switch-device
+      netbox_device:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          name: '{{ store_site }}-SW01'
+          device_type: ws-c2960-24pc-l
+          device_role: access-switch
+          platform: ios
+          site: '{{ store_site }}'
+        state: present
+      register: store_device_SW
+
+    - name: Add description for Uplink-interface for Switch-device
+      netbox_device_interface:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          device: '{{ store_device_SW.device.name }}'
+          name: 'GigabitEthernet 0/1'
+          description: 'UPLINK to {{ store_device_RT.device.name }}'
+        state: present
+
+    - name: Create SVI for MGMT
+      netbox_device_interface:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          device: '{{ store_device_SW.device.name }}'
+          name: 'vlan 10'
+          type: 'Virtual'
+          enabled: yes
+        state: present
+      register: store_device_SW_MGMT_SVI
+
+    - name: Create SVI for CLIENT
+      netbox_device_interface:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          device: '{{ store_device_SW.device.name }}'
+          name: 'vlan 30'
+          type: 'Virtual'
+          enabled: yes
+        state: present
+      register: store_device_SW_CLIENT_SVI
+
+    - name: Create SVI for GUEST
+      netbox_device_interface:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          device: '{{ store_device_SW.device.name }}'
+          name: 'vlan 40'
+          type: 'Virtual'
+          enabled: yes
+        state: present
+      register: store_device_SW_GUEST_SVI
+
+    - name: Assign IP-address for MGMT SVI
+      netbox_ip_address:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          prefix: '{{ store_MGMT_prefix.prefix.prefix }}'
+          assigned_object:
+            name: '{{ store_device_SW_MGMT_SVI.interface.name }}'
+            device: '{{ store_device_SW.device.name }}'
+        state: present
+      register: store_device_SW_MGMT_ipaddr
+
+    - name: Assign IP-address for CLIENT SVI
+      netbox_ip_address:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          prefix: '{{ store_CLIENT_prefix.prefix.prefix }}'
+          assigned_object:
+            name: '{{ store_device_SW_CLIENT_SVI.interface.name }}'
+            device: '{{ store_device_SW.device.name }}'
+        state: present
+      register: store_device_SW_CLIENT_ipaddr
+
+    - name: Assign IP-address for GUEST SVI
+      netbox_ip_address:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          prefix: '{{ store_GUEST_prefix.prefix.prefix }}'
+          assigned_object:
+            name: '{{ store_device_SW_GUEST_SVI.interface.name }}'
+            device: '{{ store_device_SW.device.name }}'
+        state: present
+      register: store_device_SW_GUEST_ipaddr
+
+    - name: Assign Primary IP-address for Switch-device
+      netbox_device:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          name: '{{ store_device_SW.device.name }}'
+          primary_ip4: '{{ store_device_SW_MGMT_ipaddr.ip_address.address }}'
+        state: present
+...
