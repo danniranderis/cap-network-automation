@@ -1,5 +1,5 @@
 ---
-- name: Create New Store in NetBox
+- name: Generate initial config-files for store-devices
   connection: local
   hosts: localhost
   collections:
@@ -67,7 +67,7 @@
       loop_control:
         label: "{{ item.item }}"
 
-    - name: GIT - UP-TO-DATE?
+    - name: GIT - Update from repository
       git:
         repo: "https://{{ github_user }}:{{ github_pass }}@github.com/danniranderis/cap-network-automation.git"
         dest: /cap-network-automation
@@ -75,33 +75,37 @@
         version: main
       register: git
       ignore_errors: True
-    - debug:
-        var: git
 
-    - name: GIT - ADD NEW FILES
+    - name: GIT - Check for local changes
+      shell: "git status"
+      args:
+        chdir: /cap-network-automation
+      register: gitstatus
+
+    - name: GIT - Add new files
       shell: "git add *"
       args:
         chdir: /cap-network-automation
       register: gitadd
-      when: git.changed
+      when: '"Untracked" in gitstatus.stdout'
     - debug:
         var: gitadd.cmd
 
-    - name: GIT - COMMITING
+    - name: GIT - Comitting
       shell: "git commit -m'Ansible config-commit'"
       args:
         chdir: /cap-network-automation
       register: gitcommit
-      when: git.changed
+      when: '"Untracked" in gitstatus.stdout'
     - debug:
         var: gitcommit.stdout
 
-    - name: GIT - PUSH
+    - name: GIT - Pushing
       shell: "git push"
       args:
         chdir: /cap-network-automation
       register: gitpush
-      when: git.changed
+      when: '"Untracked" in gitstatus.stdout'
     - debug:
         var: gitpush
 ...
