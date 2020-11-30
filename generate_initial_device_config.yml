@@ -51,7 +51,7 @@
 
     - name: Render config for RT-devices
       template:
-        src: /etc/ansible/templates/rt.j2
+        src: rt.j2
         dest: "/cap-network-automation/configs/{{ item.item }}"
       when: '"RT" in item.item'
       loop: "{{ devices_int_ips.results }}"
@@ -60,7 +60,7 @@
 
     - name: Render config for SW-devices
       template:
-        src: /etc/ansible/templates/sw.j2
+        src: sw.j2
         dest: "/cap-network-automation/configs/{{ item.item }}"
       when: '"SW" in item.item'
       loop: "{{ devices_int_ips.results }}"
