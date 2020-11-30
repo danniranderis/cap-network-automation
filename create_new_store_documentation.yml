@@ -280,6 +280,18 @@
         state: present
       register: store_device_RT_GUEST_ipaddr
 
+    - name: Assign IP-address for MPLS interface
+      netbox_ip_address:
+        netbox_url: '{{ nb_url }}'
+        netbox_token: '{{ nb_token }}'
+        data:
+          prefix: '10.8.0.0/23'
+          assigned_object:
+            name: 'GigabitEthernet0/2'
+            device: '{{ store_device_RT.device.name }}'
+        state: present
+      register: store_device_RT_MPLS_ipaddr
+
     - name: Assign Primary IP-address for Router-device
       netbox_device:
         netbox_url: '{{ nb_url }}'
