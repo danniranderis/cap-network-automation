@@ -1,0 +1,23 @@
+---
+- name: Initial prepare for GIT
+  connection: local
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: GIT - CLONE REPO / UPDATE
+      git:
+        repo: https://github.com/danniranderis/cap-network-automation.git
+        dest: /cap-network-automation
+        update: yes
+        version: main
+      register: git
+      ignore_errors: True
+
+    - name: GIT - SETUP INFO
+      shell: 'git config --global user.email "ansible@cap-butikker.dk" && git config --global user.name "Ansible Automation"'
+      args:
+        chdir: /cap-network-automation
+      register: gitconfig
+      when: git.msg is defined
+...
