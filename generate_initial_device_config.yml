@@ -1,0 +1,107 @@
+---
+- name: Create New Store in NetBox
+  connection: local
+  hosts: localhost
+  collections:
+    - netbox.netbox
+  gather_facts: false
+
+  vars:
+    nb_url: https://netbox.cap-butikker.dk
+    nb_token: 0c9af3f67783d386bcf43f24b1b84998b7549d5d
+    nb_headers:
+      Content-Type: "application/json"
+      Authorization: "token {{ nb_token }}"
+    device_name_list: []
+
+  tasks:
+    - name: Get site-obj from NetBox
+      uri:
+        url: "{{ nb_url }}/api/dcim/sites/?name__ic={{ store_id }}"
+        headers: "{{ nb_headers }}"
+        method: GET
+        status_code: 200
+      register: store_site
+
+    - name: Retrieve devices for the given site
+      uri:
+        url: "{{ nb_url }}/api/dcim/devices/?site_id={{ store_site.json.results[0].id }}"
+        headers: "{{ nb_headers }}"
+        method: GET
+        status_code: 200
+      register: store_devices
+
+    - name: Extract device-names to list
+      set_fact:
+        device_name_list: "{{ device_name_list + [ item.name ] }}"
+      loop: "{{ store_devices.json.results }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Retrieve Interface-IP informations
+      uri:
+        url: "{{ nb_url }}/api/ipam/ip-addresses/?device={{ item }}"
+        headers: "{{ nb_headers }}"
+        method: GET
+        status_code: 200
+      loop: "{{ device_name_list }}"
+      loop_control:
+        label: "{{ item }}"
+      register: devices_int_ips
+
+    - name: Render config for RT-devices
+      template:
+        src: /etc/ansible/templates/rt.j2
+        dest: "/cap-network-automation/configs/{{ item.item }}"
+      when: '"RT" in item.item'
+      loop: "{{ devices_int_ips.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Render config for SW-devices
+      template:
+        src: /etc/ansible/templates/sw.j2
+        dest: "/cap-network-automation/configs/{{ item.item }}"
+      when: '"SW" in item.item'
+      loop: "{{ devices_int_ips.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: GIT - UP-TO-DATE?
+      git:
+        repo: https://github.com/danniranderis/cap-network-automation.git
+        dest: /cap-network-automation
+        update: yes
+        version: main
+      register: git
+      ignore_errors: True
+    - debug:
+        var: git
+
+    - name: GIT - ADD NEW FILES
+      shell: "git add *"
+      args:
+        chdir: /cap-network-automation
+      register: gitadd
+      when: git.msg is defined
+    - debug:
+        var: gitadd.cmd
+
+    - name: GIT - COMMITING
+      shell: "git commit -m'Ansible config-commit'"
+      args:
+        chdir: /cap-network-automation
+      register: gitcommit
+      when: git.msg is defined
+    - debug:
+        var: gitcommit.stdout
+
+    - name: GIT - PUSH
+      shell: "git push"
+      args:
+        chdir: /cap-network-automation
+      register: gitpush
+      when: git.msg is defined
+    - debug:
+        var: gitpush
+...
