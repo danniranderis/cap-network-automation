@@ -1,0 +1,24 @@
+---
+# https://docs.ansible.com/ansible/2.9/modules/ios_vlans_module.html#ios-vlans-module
+
+- name: Deploy new VLAN to all stores
+  connection: network_cli
+  gather_facts: false
+  hosts: device_roles_access-switch
+
+  tasks:
+    - name: Create new vlan
+      ios_vlans:
+        config:
+          - name: '{{ vlan_name }}'
+            vlan_id: '{{ vlan_id }}'
+        state: merged
+      notify: "Save ios"
+
+
+  handlers:
+    - name: Save ios
+      ios_command:
+        commands: "write mem"
+      when: not ansible_check_mode
+...
