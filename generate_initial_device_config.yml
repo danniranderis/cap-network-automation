@@ -83,7 +83,7 @@
       args:
         chdir: /cap-network-automation
       register: gitadd
-      when: git.msg is defined
+      when: git.changed
     - debug:
         var: gitadd.cmd
 
@@ -92,7 +92,7 @@
       args:
         chdir: /cap-network-automation
       register: gitcommit
-      when: git.msg is defined
+      when: git.changed
     - debug:
         var: gitcommit.stdout
 
@@ -101,7 +101,7 @@
       args:
         chdir: /cap-network-automation
       register: gitpush
-      when: git.msg is defined
+      when: git.changed
     - debug:
         var: gitpush
 ...
