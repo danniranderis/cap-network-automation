@@ -19,5 +19,4 @@
       args:
         chdir: /cap-network-automation
       register: gitconfig
-      when: git.msg is defined
 ...
