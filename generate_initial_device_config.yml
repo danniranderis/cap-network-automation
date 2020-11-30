@@ -69,7 +69,7 @@
 
     - name: GIT - UP-TO-DATE?
       git:
-        repo: https://github.com/danniranderis/cap-network-automation.git
+        repo: "https://{{ github_user }}:{{ github_pass }}@github.com/danniranderis/cap-network-automation.git"
         dest: /cap-network-automation
         update: yes
         version: main
